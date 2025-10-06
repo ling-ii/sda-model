@@ -1,92 +1,65 @@
 import numpy as np
-from sklearn import preprocessing
+import numpy.typing as npt
 import torch
 
-RANDOM_SEED: int = 3948576
+__RANDOM_SEED__: int = 3948576
+
 
 class PairDataset(torch.utils.data.Dataset):
-    def __init__(self, dataset: np.ndarray) -> None:
 
-        # Set random seed        
-        self.rng = np.random.default_rng(RANDOM_SEED)
-        self.rng.shuffle(dataset)
+    """
+        # PairDataset
 
-        # Extract data and labels
-        self._data = dataset[:, :-1]
-        self.labels = dataset[:,-1].reshape(-1)
-
-        # Select element sets
-        self.data = {
-            'mee': self._data[:, :6],
-            'pnc': self._data[:, 6:12],
-            'qtn': self._data[:, 12:]
-        }
-
-        # Slice into training, validation, test sets
-        n = len(self._data)
-        train_idx = int(0.7 * n)
-        valid_idx = int(0.8 * n)
-
-        self.train = {}
-        self.valid = {}
-        self.test = {}
-
-        self.train_labels, self.valid_labels, self.test_labels = np.split(self.labels, [train_idx, valid_idx])
-
-        elements = ['mee', 'pnc', 'qtn']
-        for el in elements:
-            (
-                self.train[el],
-                self.valid[el],
-                self.test[el]
-            ) = np.split(self.data[el], [train_idx, valid_idx])
+        Create dataset object with data and label loading functions.
         
-        # Scale data from training data
-        # TODO Add minmax scaler for altitude measures
-        for el in elements:
-            scaler = preprocessing.StandardScaler().fit(self.train[el])
-            self.train[el] = scaler.transform(self.train[el])
+        ## Data structure:
 
-        self.subset = None
-        self.sublab = None
+        +---------+---------+---------+       +--------+
+        | MEE * 3 | PNC * 3 | QTN * 3 |   +   | labels |
+        +---------+---------+---------+       +--------+
+
+        - MEE: (h, k) -> proper ecc., (p, q) -> proper inc., proper semi-major
+        - PNC: similar to MEE but with different scalings
+        - QTN: (qtn0, qtn3), (qtn1, qtn2), proper ecc.
+
+    """
+
+    def __init__(self) -> None:
+
+        # Complete data
+        self.rng: np.Generator = np.random.default_rng(__RANDOM_SEED__)
+        self.data: npt.ArrayLike = None
+        self.labels: npt.ArrayLike = None
+
+        # Data preprocessing stack
+        self.preproc: list = None
+
+        # Data subsets and labels
+        self.subset: npt.ArrayLike = None
+        self.sublab: npt.ArrayLike = None
 
         return
-    
+
     def __len__(self) -> int:
         return len(self.subset)
-    
-    def __getitem__(self, idx):
+
+    def __getitem__(self, idx: int) -> tuple:
         return self.subset[idx], self.sublab[idx]
-
-    def tensorify(self, data_dict: dict, data_type:torch.dtype=torch.float32) -> dict:
-        """
-        Input dictionary of np.ndarrays
-        Ouput dictionary of torch.tensor
-        """
-
-        for key in data_dict.keys():
-            data_dict[key] = torch.tensor(data_dict[key]).to(data_type)
-
-        return data_dict
     
-    def choose_set(self, settype:str, element:str) -> None:
+    def __totensor__(self, data: npt.ArrayLike) -> torch.TensorType:
+        return torch.tensor(data)
 
-        if settype == 'train':
-            dataset = self.tensorify(self.train, torch.float32)
-            labels = torch.tensor(self.train_labels).to(torch.int64)
-        elif settype == 'valid':
-            dataset = self.tensorify(self.valid, torch.float32)
-            labels = torch.tensor(self.valid_labels).to(torch.int64)
-        elif settype == 'test':
-            dataset = self.tensorify(self.test, torch.float32)
-            labels = torch.tensor(self.test_labels).to(torch.int64)
-        else:
-            return
+    def __checkset__(self) -> bool:
+        return (self.data.shape[0] == self.labels.shape[0])
 
-        if element not in ['mee', 'pnc', 'qtn']:
-            return
-        
-        self.subset = dataset[element]
-        self.sublab = labels
+    def choose_set(self) -> None:
+        return
+    
+    def load_dataset(self, dataset: npt.ArrayLike) -> None:
+        self.data = np.asarray(dataset, dtype=np.float32).copy()
+        return
 
+    def load_labels(self, labels: npt.ArrayLike) -> None:
+        self.labels = np.asarray(labels, dtype=np.int32).copy()
+        self.labels.reshape(-1, 1)
         return
