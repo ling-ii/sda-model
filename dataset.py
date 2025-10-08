@@ -104,8 +104,8 @@ class PairDataset(torch.utils.data.Dataset):
 
         # Send to GPU
         if torch.cuda.is_available():
-            self.subset = self.subset.cuda()
-            self.sublab = self.sublab.cuda()
+            self.subset = self.subset.cuda(non_blocking=True)
+            self.sublab = self.sublab.cuda(non_blocking=True)
 
         return
     
