@@ -1,7 +1,8 @@
-from tqdm import tqdm
-import torch
 import numpy as np
 import numpy.typing as npt
+from tqdm import tqdm
+import threading
+import torch
 
 class Model:
     def __init__(
@@ -13,14 +14,19 @@ class Model:
         num_epoch:int=500,
         mdl_id: int=0,
         silent: bool=False,
+        stream: torch.cuda.Stream=None
     ) -> None:
         
         # Training progress output
         self.silent = silent
 
-        # Model and dataset
-        model = torch.nn.Sequential(*layers)
-        self.model = model.cuda()
+        # Ensure model on new stream
+        self.stream = stream if stream is not None else torch.cuda.Stream()
+        with torch.cuda.stream(self.stream):
+            self.model = torch.nn.Sequential(*layers).cuda()
+        self.stream.synchronize()
+
+        # Model dataset and id
         self.ds = ds
         self.id = mdl_id
 
@@ -42,6 +48,11 @@ class Model:
         self.num_epoch: int = num_epoch
         self.losses: npt.NDArray = np.zeros(shape=(self.num_epoch,))
 
+    def __del__(self) -> None:
+        if self.stream is not None:
+            self.stream.synchronize()
+        return
+
     def __train__(self) -> npt.NDArray:
 
         with tqdm(
@@ -58,13 +69,19 @@ class Model:
 
                 # Training loop
                 for inputs, labels in self.loader:
-                    self.optimizer.zero_grad()
-                    outputs = self.model(inputs)
-                    one_hot_labels = torch.nn.functional.one_hot(labels, num_classes=2).float()
-                    loss = self.criterion(outputs, one_hot_labels)
-                    loss.backward()
-                    self.optimizer.step()
-                    running_loss += loss.item()
+                    # Set cuda stream
+                    with torch.cuda.stream(self.stream):
+                        # Ensure data is on correct stream
+                        inputs = inputs.cuda(non_blocking=True)
+                        labels = labels.cuda(non_blocking=True)
+
+                        self.optimizer.zero_grad()
+                        outputs = self.model(inputs)
+                        one_hot_labels = torch.nn.functional.one_hot(labels, num_classes=2).float()
+                        loss = self.criterion(outputs, one_hot_labels)
+                        loss.backward()
+                        self.optimizer.step()
+                        running_loss += loss.item()
 
                 # Update losses
                 avg_loss = running_loss / len(self.loader)
@@ -88,13 +105,19 @@ class Model:
 
             # Training loop
             for inputs, labels in self.loader:
-                self.optimizer.zero_grad()
-                outputs = self.model(inputs)
-                one_hot_labels = torch.nn.functional.one_hot(labels, num_classes=2).float()
-                loss = self.criterion(outputs, one_hot_labels)
-                loss.backward()
-                self.optimizer.step()
-                running_loss += loss.item()
+                # Set cuda stream
+                with torch.cuda.stream(self.stream):
+                    # Ensure data is on correct stream
+                    inputs = inputs.cuda(non_blocking=True)
+                    labels = labels.cuda(non_blocking=True)
+
+                    self.optimizer.zero_grad()
+                    outputs = self.model(inputs)
+                    one_hot_labels = torch.nn.functional.one_hot(labels, num_classes=2).float()
+                    loss = self.criterion(outputs, one_hot_labels)
+                    loss.backward()
+                    self.optimizer.step()
+                    running_loss += loss.item()
 
             # Update losses
             avg_loss = running_loss / len(self.loader)
@@ -109,3 +132,38 @@ class Model:
     
     def train(self) -> npt.NDArray:
         return (self.__silenttrain__() if self.silent else self.__train__())
+    
+
+class MultiTrainer:
+    def __init__(self, mdls: list[Model]) -> None:
+        self.mdls = mdls
+        self.results = {}
+        self.threads = []
+        self.streams = [mdl.stream for mdl in mdls]
+        return
+
+    def __trainmodel__(self, mdl: Model) -> None:
+        """Wrapper for Model.train()"""
+        self.results[mdl.id] = mdl.train()
+        return
+    
+    def train_models(self) -> dict:
+        # Start new thread for each model
+        for mdl in self.mdls:
+            thread = threading.Thread(
+                target=self.__trainmodel__,
+                args=(mdl,)
+            )
+            self.threads.append(thread)
+            thread.start()
+
+        # Await threads
+        for thread in self.threads:
+            thread.join()
+
+        # Synchronize streams
+        for stream in self.streams:
+            stream.synchronize()
+
+        return self.results
+    

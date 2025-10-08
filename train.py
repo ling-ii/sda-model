@@ -2,7 +2,6 @@ import dataset
 import manip
 import model
 import preprocessing
-import multitrainer
 
 # import multiprocessing as mp
 from tqdm import tqdm
@@ -215,7 +214,7 @@ def main() -> None:
     #         )
     #     )
 
-    trainer = multitrainer.MultiTrainer(mdls)
+    trainer = model.MultiTrainer(mdls)
     results = trainer.train_models()
 
     # Process results
