@@ -1,10 +1,9 @@
 import dataset
 import manip
 import model
-import trainer as trnr
 import preprocessing
 
-# import multiprocessing as mp
+import multiprocessing as mp
 from tqdm import tqdm
 import torch
 import os
@@ -28,15 +27,15 @@ def create_layers(neurons: list[int], nonlin=torch.nn.ReLU) -> list:
     
     return layers
 
-# def train_model(args) -> tuple:
-#     mdl, mdl_id = args
-#     try:
-#         result = mdl.train()
-#         return mdl_id, result
-#     except Exception as e:
-#         return mdl_id, None
+def train_model(args) -> tuple:
+    mdl, mdl_id = args
+    try:
+        result = mdl.train()
+        return mdl_id, result
+    except Exception as e:
+        return mdl_id, None
     
-def write_report(results:dict, path:str='./training/', *params: list) -> None:
+def write_report(results:list, path:str='./training/', *params: list) -> None:
 
     # Get latest batch id
     batches = [
@@ -51,7 +50,7 @@ def write_report(results:dict, path:str='./training/', *params: list) -> None:
     os.makedirs(batch_name, exist_ok=True)
 
     # Write results
-    for mdl_id, result in results.items():
+    for mdl_id, result in results:
         if result is not None:
             mdl_name = os.path.join(batch_name, f'model_{mdl_id}.np')
             result.tofile(mdl_name)
@@ -90,206 +89,23 @@ def main() -> None:
 
     # Create list of model parameters
     print(f"Loading model parameters ...")
-    neurons = [
+    _num = 15
+    neurons = _num * [
         # Vary batch size
-        [6, 200, 200, 200, 2],
-        [6, 200, 200, 200, 2],
-        [6, 200, 200, 200, 2],
-        [6, 200, 200, 200, 2],
-        [6, 200, 200, 200, 2],
-
-        [6, 200, 200, 200, 2],
-        [6, 200, 200, 200, 2],
-        [6, 200, 200, 200, 2],
-        [6, 200, 200, 200, 2],
-        [6, 200, 200, 200, 2],
-        
-        [6, 200, 200, 200, 2],
-        [6, 200, 200, 200, 2],
-        [6, 200, 200, 200, 2],
-        [6, 200, 200, 200, 2],
-        [6, 200, 200, 200, 2],
-
-        [6, 200, 200, 200, 2],
-        [6, 200, 200, 200, 2],
-        [6, 200, 200, 200, 2],
-        [6, 200, 200, 200, 2],
-        [6, 200, 200, 200, 2],
-        
-        [6, 200, 200, 200, 2],
-        [6, 200, 200, 200, 2],
-        [6, 200, 200, 200, 2],
-        [6, 200, 200, 200, 2],
-        [6, 200, 200, 200, 2],
-
-        [6, 200, 200, 200, 2],
-        [6, 200, 200, 200, 2],
-        [6, 200, 200, 200, 2],
-        [6, 200, 200, 200, 2],
-        [6, 200, 200, 200, 2],
-        
-        [6, 200, 200, 200, 2],
-        [6, 200, 200, 200, 2],
-        [6, 200, 200, 200, 2],
-        [6, 200, 200, 200, 2],
-        [6, 200, 200, 200, 2],
-
-        [6, 200, 200, 200, 2],
-        [6, 200, 200, 200, 2],
-        [6, 200, 200, 200, 2],
-        [6, 200, 200, 200, 2],
         [6, 200, 200, 200, 2],
     ]
     layers = [create_layers(layer) for layer in neurons]
 
-    lrs = [
-        0.002,
-        0.002,
-        0.002,
-        0.002,
-        0.002,
-        
-        0.002,
-        0.002,
-        0.002,
-        0.002,
-        0.002,
-
-        0.002,
-        0.002,
-        0.002,
-        0.002,
-        0.002,
-        
-        0.002,
-        0.002,
-        0.002,
-        0.002,
-        0.002,
-
-        0.002,
-        0.002,
-        0.002,
-        0.002,
-        0.002,
-        
-        0.002,
-        0.002,
-        0.002,
-        0.002,
-        0.002,
-
-        0.002,
-        0.002,
-        0.002,
-        0.002,
-        0.002,
-        
-        0.002,
-        0.002,
-        0.002,
-        0.002,
+    lrs = _num * [
         0.002,
     ]
 
-    batch_sizes = [
-        3000,
-        3000,
-        3000,
-        3000,
-        3000,
-        
-        3000,
-        3000,
-        3000,
-        3000,
-        3000,
-
-        3000,
-        3000,
-        3000,
-        3000,
-        3000,
-        
-        3000,
-        3000,
-        3000,
-        3000,
-        3000,
-
-        3000,
-        3000,
-        3000,
-        3000,
-        3000,
-        
-        3000,
-        3000,
-        3000,
-        3000,
-        3000,
-
-        3000,
-        3000,
-        3000,
-        3000,
-        3000,
-        
-        3000,
-        3000,
-        3000,
-        3000,
+    batch_sizes = _num * [
         3000,
     ]
 
-    num_epochs = [
-        5,
-        5,
-        5,
-        5,
-        5,
-
-        5,
-        5,
-        5,
-        5,
-        5,
-
-        5,
-        5,
-        5,
-        5,
-        5,
-
-        5,
-        5,
-        5,
-        5,
-        5,
-
-        5,
-        5,
-        5,
-        5,
-        5,
-
-        5,
-        5,
-        5,
-        5,
-        5,
-
-        5,
-        5,
-        5,
-        5,
-        5,
-
-        5,
-        5,
-        5,
-        5,
-        5,
+    num_epochs = _num * [
+        10,
     ]
 
     # Check parameters
@@ -320,26 +136,24 @@ def main() -> None:
     print(f"Running model training ...")
 
     # Create tuple list of models and ids
-    # mdl_args = [(mdl, i) for i, mdl in enumerate(mdls)]
+    mdl_args = [(mdl, i) for i, mdl in enumerate(mdls)]
 
     # Run multiprocessing pool to train models in parallel
-    # with mp.Pool(processes=min(num_mdls, mp.cpu_count())) as pool:
-    #     results = list(
-    #         tqdm(
-    #             pool.imap(train_model, mdl_args),
-    #             total=num_mdls,
-    #             desc="Training models",
-    #             unit="model"
-    #         )
-    #     )
-
-    trainer = trnr.MultiModelTrainer(mdls)
-    results = trainer.train_concurrent_batches(10)
+    with mp.Pool(processes=min(num_mdls, 15)) as pool:
+        results = list(
+            # tqdm(
+            pool.imap(train_model, mdl_args),
+            #     total=num_mdls,
+            #     desc="Training models",
+            #     unit="model",
+            #     position=0
+            # )
+        )
 
     # Process results
     print(f"Training complete. Processing results ...")
     write_report(results, 'training/', neurons, lrs, batch_sizes, num_epochs)
 
 if __name__ == '__main__':
-    # mp.set_start_method('spawn', force=True)
+    mp.set_start_method('spawn', force=True)
     main()
