@@ -1,5 +1,7 @@
 data/*
 training/*
 testing/*
+ray_results/*
 __pycache__/*
 *.svg
+diagnostic.ipynb

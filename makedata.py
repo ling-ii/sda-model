@@ -21,10 +21,11 @@ def main():
 
     # Reconnect data and labels
     pairs = np.column_stack((pair_data, pair_labels))
+    print(f"Data type: {pairs.dtype}")
 
     # Save data to file
     print(f"Saving ...")
-    pairs.tofile(os.path.join(path, 'dataset.out'))
+    np.save(os.path.join(path, 'dataset'), pairs)
     print(f"Done.")
 
     return

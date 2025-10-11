@@ -56,7 +56,7 @@ class PairDataset(torch.utils.data.Dataset):
 
     def __splitset__(self, set) -> None:
         n = len(set)
-        return np.split(set, [int(self._train_split *n), int(self._valid_split)])
+        return np.split(set, [int(self._train_split * n), int(self._valid_split * n)])
 
     def load_dataset(self, dataset: npt.ArrayLike) -> None:
         self.data = np.asarray(dataset, dtype=np.float32).copy()
@@ -104,8 +104,8 @@ class PairDataset(torch.utils.data.Dataset):
 
         # Send to GPU
         if torch.cuda.is_available():
-            self.subset = self.subset.cuda(non_blocking=True)
-            self.sublab = self.sublab.cuda(non_blocking=True)
+            self.subset = self.subset
+            self.sublab = self.sublab
 
         return
     

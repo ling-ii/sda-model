@@ -1,0 +1,4 @@
+lr: 0.018148101332663768
+batch_size: 256
+layer_width: 200
+num_layers: 5
