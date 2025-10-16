@@ -1,18 +1,15 @@
 import os
 import tempfile
-import ray.cloudpickle as pickle
 import torch
 import numpy as np
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import ray
-from ray import tune, train
+from ray import tune
 from ray.tune.schedulers import ASHAScheduler
-from ray.air import session
 from ray.tune import Checkpoint
 from ray.tune.search.optuna import OptunaSearch
-from functools import partial
 
 import dataset  # Your dataset module
 
@@ -184,7 +181,7 @@ def train_model(config, data=None, checkpoint_dir=None):
             checkpoint = Checkpoint.from_directory(checkpoint_dir)
             
             # Report metrics to Ray Tune with proper checkpoint
-            train.report({
+            tune.report({
                 "loss": avg_val_loss,
                 "accuracy": val_accuracy,
                 "epoch": epoch
@@ -198,7 +195,7 @@ def tune_model():
     # Define search space
     config = {
         "lr": tune.loguniform(1e-4, 1e-1),
-        "batch_size": tune.choice([128, 256, 512, 1024, 2048]),
+        "batch_size": tune.choice([1024, 2048, 3072, 4096]),
         "layer_width": tune.choice([64, 128, 200, 256, 512]),
         "num_layers": tune.choice([2, 3, 4, 5, 6])
     }
@@ -300,7 +297,7 @@ def train_best_model(best_config):
 
 if __name__ == "__main__":
     # Initialize Ray
-    ray.init(num_cpus=4, num_gpus=1)
+    ray.init(num_cpus=5, num_gpus=1)
     
     # Run hyperparameter tuning
     best_trial = tune_model()
