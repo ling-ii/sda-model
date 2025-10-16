@@ -55,9 +55,15 @@ def shuffle_balance_data(data: npt.ArrayLike) -> npt.ArrayLike:
     data_t = (data[is_true])
     data_f = (data[np.logical_not(is_true)])
     
+    # Shuffle data before balancing to ensure fair sampling
     np.random.default_rng(3489756).shuffle(data_t)
     np.random.default_rng(2384675).shuffle(data_f)
 
+    # Find sampling ratio
     ratio = 1 / (len(data_t) / len(data_f))
 
-    return np.concatenate((data_t, data_f[::int(ratio)]))
+    # Balance data, concatenate and reshuffle
+    balanced_data = np.concatenate((data_t, data_f[::int(ratio)]))
+    np.random.default_rng(9874564).shuffle(balanced_data)
+
+    return balanced_data
